@@ -1,0 +1,34 @@
+version: "2.2"
+services:
+  builder:
+    image: rucciva/golang:1.14.2-alpine
+    volumes:
+      - ${PWD}:${PWD}
+      - ${GOPATH:-/go}/pkg/mod:/go/pkg/mod
+    working_dir: ${PWD}
+    environment: 
+      - GOCACHE=${PWD}/.go/build
+    entrypoint: /bin/sh -c
+    command:
+      - go build 
+        -tags nolimit 
+        -o release/linux/amd64/drone-server 
+        github.com/drone/drone/cmd/drone-server 
+  
+  drone:
+    image: rucciva/drone:1.8.1
+    build: 
+      context: .
+      dockerfile: ./docker/Dockerfile.server.linux.amd64
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock 
+    environment:
+      - DRONE_GITEA_SERVER=http://git.rucciva.one
+      - DRONE_GIT_ALWAYS_AUTH=false
+      - DRONE_RUNNER_CAPACITY=2
+      - DRONE_SERVER_HOST=localhost
+      - DRONE_SERVER_PROTO=http
+      - DRONE_TLS_AUTOCERT=false
+    ports:
+      - 8080:80
+      - 8443:443
